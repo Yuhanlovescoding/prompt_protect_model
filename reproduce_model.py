@@ -1,20 +1,16 @@
 import os
 from argparse import ArgumentParser
-from tempfile import mkdtemp
-import sklearn
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from datasets import load_dataset
-import skops.hub_utils as hub_utils
 from skops.io import dump
 
 
 class PromptProtectTrainer:
     """
-    Trainer class to handle data loading, model training, evaluation,
-    saving, and uploading to HuggingFace Hub.
+    Trainer class to handle data loading, model training, evaluation and saving.
     """
     def __init__(self, config):
         """
