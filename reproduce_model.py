@@ -1,8 +1,3 @@
-"""
-Prompt Injection Detection Model Trainer
-Fixed version with correct Pipeline structure
-"""
-
 import os
 from argparse import ArgumentParser
 from tempfile import mkdtemp
@@ -17,20 +12,34 @@ from skops.io import dump
 
 
 class PromptProtectTrainer:
+    """
+    Trainer class to handle data loading, model training, evaluation,
+    saving, and uploading to HuggingFace Hub.
+    """
     def __init__(self, config):
+        """
+        Initializes the trainer with the provided config.
+        """
         self.config = config
         self.model = None
         self.dataset = None
         self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
 
     def load_data(self):
-        """Load dataset from HuggingFace"""
+        """
+        Load the dataset from HuggingFace datasets.
+
+        Returns: DatasetDict: HuggingFace dataset dictionary.
+        """
+
         print(f"Loading dataset: {self.config.data}")
         self.dataset = load_dataset(self.config.data)
         return self.dataset
 
     def prepare_data(self):
-        """Prepare train/test splits"""
+        """
+        Prepare train/test splits
+        """
         train_data = self.dataset['train'].to_pandas()
         test_data = self.dataset['test'].to_pandas()
 
@@ -43,7 +52,11 @@ class PromptProtectTrainer:
         print(f"Test samples: {len(self.X_test)}")
 
     def build_model(self):
-        """EXACT reproduction of original model"""
+        """
+        Constructs the machine learning pipeline model.
+
+        Returns: scikit-learn pipeline using TF-IDF and LogisticRegression.
+        """
         self.model = Pipeline([
             ("vectorize", TfidfVectorizer(max_features=5000)),  # 完全一致
             ("lgr", LogisticRegression())  # 完全一致
@@ -51,13 +64,21 @@ class PromptProtectTrainer:
         return self.model
 
     def train(self):
-        """Train the model"""
+        """
+        Trains the pipeline model using training data.
+
+        Returns: The trained pipeline.
+        """
         print("Training model...")
         self.model.fit(self.X_train, self.y_train)
         return self.model
 
     def evaluate(self):
-        """Evaluate model performance"""
+        """
+        Evaluates the trained model on test data.
+
+        Returns: str: Text classification report.
+        """
         y_pred = self.model.predict(self.X_test)
         report = classification_report(self.y_test, y_pred)
         print("\nModel Evaluation:")
@@ -65,39 +86,23 @@ class PromptProtectTrainer:
         return report
 
     def save_model(self):
-        """Save model to disk"""
+        """
+        Saves the trained model to disk as a .skops file.
+
+        Returns: str: Path to saved model file.
+        """
         os.makedirs(self.config.save_dir, exist_ok=True)
         model_path = os.path.join(self.config.save_dir, f"{self.config.model_name}.skops")
         dump(self.model, model_path)
         print(f"Model saved to: {model_path}")
         return model_path
 
-    def upload_to_hub(self, model_path):
-        """Upload model to HuggingFace Hub"""
-        if not self.config.upload:
-            return
-
-        print("Preparing model for Hub upload...")
-        local_repo = mkdtemp(prefix="skops-")
-
-        hub_utils.init(
-            model=model_path,
-            dst=local_repo,
-            requirements=[f"scikit-learn={sklearn.__version__}"],
-            task="text-classification",
-            data=self.X_test.tolist(),
-        )
-
-        hub_utils.push(
-            source=local_repo,
-            repo_id=self.config.repo_id,
-            commit_message=self.config.commit_message
-        )
-        print(f"Model uploaded to: {self.config.repo_id}")
 
 
 def parse_args():
-    """Parse command line arguments"""
+    """
+    Parse command line arguments
+    """
     parser = ArgumentParser(description="Prompt Injection Detection Model Trainer")
     parser.add_argument("--data", default="deepset/prompt-injections",
                         help="HuggingFace dataset name")
@@ -115,20 +120,17 @@ def parse_args():
 
 
 def main():
-    # Configuration and training
     config = parse_args()
     trainer = PromptProtectTrainer(config)
 
-    # Execute training pipeline
     trainer.load_data()
     trainer.prepare_data()
     trainer.build_model()
     trainer.train()
     trainer.evaluate()
 
-    # Save and optionally upload
     model_path = trainer.save_model()
-    trainer.upload_to_hub(model_path)
+
 
 
 if __name__ == "__main__":
