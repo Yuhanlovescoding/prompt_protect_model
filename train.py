@@ -1,7 +1,3 @@
-# Released under the MIT License by thevgergroup
-# Copyright (c) 2024 thevgergroup
-
-
 from sklearn.pipeline import Pipeline
 
 from skops import card, hub_utils
@@ -17,7 +13,6 @@ from tempfile import mkdtemp, mkstemp
 import sklearn
 from argparse import ArgumentParser
 
-# Define the default values
 
 data = "deepset/prompt-injections"
 save_directory = "models"
@@ -30,15 +25,26 @@ X_train, X_test, y_train, y_test = None, None, None, None
 
 
 def load_data(data):
-    # Load the dataset
+    """
+    Loads a HuggingFace dataset by name. The dataset must include
+    'train' and 'test' splits and contain 'text' and 'label' fields.
+
+    Args:data (str): Name or path of the dataset.
+
+    Returns:DatasetDict: A dictionary containing train/test splits.
+    """
     dataset = load_dataset(data)
     return dataset
 
 
 def split_data(dataset):
+    """
+    Splits the loaded dataset into training and testing sets. This function assumes
+    that the dataset is already split into 'train' and 'test'.
+
+    Populates global variables: X_train, y_train, X_test, y_test
+    """
     global X_train, X_test, y_train, y_test
-    # deepset data is already split into train and test
-    # replate this with your own data splitting logic for other datasets
     df_train = dataset['train'].to_pandas()
     df_test = dataset['test'].to_pandas()
     X_train = df_train['text']
@@ -48,6 +54,15 @@ def split_data(dataset):
 
 
 def train_model(X_train, y_train):
+    """
+    Trains a logistic regression model using TF-IDF vectorization.
+
+    Args:
+    X_train (List[str]): Training texts.
+    y_train (List[int]): Training labels.
+
+    Returns: Pipeline: A trained sklearn pipeline.
+    """
     model = Pipeline(
         [
             ("vectorize", TfidfVectorizer(max_features=5000)),
@@ -60,6 +75,13 @@ def train_model(X_train, y_train):
 
 
 def evaluate_model(model):
+    """
+    Evaluates the trained model on the test dataset and returns a classification report.
+
+    Args: model (Pipeline): The trained scikit-learn pipeline.
+
+    Returns: str: Classification report as a string.
+    """
     global X_train, X_test, y_train, y_test
     y_pred = model.predict(X_test)
     return classification_report(y_test, y_pred)
@@ -97,9 +119,8 @@ if __name__ == "__main__":
     report = evaluate_model(model)
     print(report)
 
-    # Save the model
-
-    model_path = os.path.join(save_directory)  # this will convert the path to OS specific path
+    # save model locally
+    model_path = os.path.join(save_directory)
     print("Saving model to", model_path)
     os.makedirs(model_path, exist_ok=True)
 
@@ -108,7 +129,6 @@ if __name__ == "__main__":
     dump(model, file=model_file)
 
     if upload:
-        # Push the model to the hub
         local_repo = mkdtemp(prefix="skops-")
         print("Creating local repo at", local_repo)
         hub_utils.init(model=model_file,

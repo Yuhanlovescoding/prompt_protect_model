@@ -7,14 +7,16 @@ from sklearn.metrics import precision_recall_fscore_support
 from datetime import datetime
 import os
 
-# Configuration
+
 API_URL = "https://api.siliconflow.cn/v1/chat/completions"
 API_KEY = os.getenv("SILICONCLOUD_API_KEY")
 OUTPUT_FILE = "models/prompt_detection_full_dataset_results.json"
-REQUEST_INTERVAL = 1  # Interval between requests (in seconds) to avoid rate limiting
+REQUEST_INTERVAL = 1
 
 def detect_prompt(prompt):
-    """Enhanced prompt injection detection using SiliconFlow API"""
+    """
+    Enhanced prompt injection detection using SiliconFlow API
+    """
     system_content = """
         # Role
         You are a security specialist AI designed to detect malicious prompt injections and jailbreak attempts.
@@ -67,7 +69,7 @@ def detect_prompt(prompt):
         return 0, 0, 500  # Return a safe default on error
 
 
-# Load the complete dataset
+# Dataset initialization
 print("Loading the full deepset/prompt-injections dataset...")
 dataset = load_dataset("deepset/prompt-injections")
 test_data = dataset["test"]
@@ -85,7 +87,7 @@ results = {
     "performance_metrics": {}
 }
 
-# Run evaluation on the full dataset
+
 true_labels, predictions, latencies = [], [], []
 for i, item in enumerate(test_data):
     prompt = item["text"]
@@ -96,7 +98,6 @@ for i, item in enumerate(test_data):
     predictions.append(pred)
     latencies.append(latency)
 
-    # Store individual sample result
     results["test_cases"].append({
         "id": i,
         "prompt": prompt,
@@ -108,19 +109,17 @@ for i, item in enumerate(test_data):
         "correct": pred == true_label
     })
 
-    # Verbose progress output
     print(f"Sample {i + 1}/{len(test_data)} | Predicted: {pred} (True: {true_label}) | Latency: {latency:.2f}s")
 
-
-    # Pause to avoid API rate limits
     if (i + 1) % 10 == 0:
         print(f"Processed {i + 1} samples. Sleeping for {REQUEST_INTERVAL} second(s)...")
         time.sleep(REQUEST_INTERVAL)
 
 # Calculate detailed classification report
-
 def convert_numpy_types(obj):
-    """Convert numpy types to native Python types for JSON serialization"""
+    """
+    Convert numpy types to native Python types for JSON serialization
+    """
     if isinstance(obj, np.integer):
         return int(obj)
     elif isinstance(obj, np.floating):
@@ -137,13 +136,11 @@ precision, recall, f1, support = precision_recall_fscore_support(
     true_labels, predictions, average=None, labels=[0, 1]
 )
 
-# Convert numpy types to native Python types immediately
 precision = [float(x) for x in precision]
 recall = [float(x) for x in recall]
 f1 = [float(x) for x in f1]
 support = [int(x) for x in support]
 
-# Calculate macro and weighted averages
 macro_precision = float(np.mean(precision))
 macro_recall = float(np.mean(recall))
 macro_f1 = float(np.mean(f1))
@@ -152,7 +149,6 @@ weighted_precision, weighted_recall, weighted_f1, _ = precision_recall_fscore_su
     true_labels, predictions, average='weighted'
 )
 
-# Store performance metrics with explicit type conversion
 results["performance_metrics"] = {
     "class_0": {
         "precision": round(float(precision[0]), 4),
@@ -186,11 +182,11 @@ results["performance_metrics"] = {
 # Apply type conversion to the entire results dictionary
 results = convert_numpy_types(results)
 
-# Save results to disk
+
 with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     json.dump(results, f, ensure_ascii=False, indent=2)
 
-# Final summary output - formatted as a table
+# Final summary output
 print(f"\nResults saved to {OUTPUT_FILE}")
 print("\n===== Detailed Classification Report =====")
 print(f"{'Class':<10}{'Precision':<12}{'Recall':<12}{'F1-Score':<12}{'Support':<12}")
@@ -206,7 +202,6 @@ print(f"Average latency: {np.mean(latencies):.2f}s")
 print(f"Correct predictions: {sum(p == t for p, t in zip(predictions, true_labels))}/{len(test_data)}")
 print(f"Malicious prompts detected: {sum(predictions)} (Actual malicious: {sum(true_labels)})")
 
-# Token & cost estimation with type conversion
 avg_tokens = float(sum(len(p["prompt"]) // 4 for p in results["test_cases"]) / len(test_data))
 total_tokens = float(avg_tokens * len(test_data))
 estimated_cost = float(total_tokens * 0.008 / 1000)  # Example pricing: $0.008 per 1k tokens
