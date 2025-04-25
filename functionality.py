@@ -9,11 +9,11 @@ def load_model():
 
     Returns: our trained detection model.
     """
-    model_path = 'models/thevgergroup/prompt_protect_model.skops'
+    model_path = 'models/prompt_protect/prompt_protect_model.skops'
     if not Path(model_path).exists():
         raise FileNotFoundError(
             f"Model file not found at {model_path}.\n"
-            "Please train your model first by running train.py"
+            "Please train your model first by running reproduce_model.py"
         )
 
     untrusted = get_untrusted_types(file=model_path)
