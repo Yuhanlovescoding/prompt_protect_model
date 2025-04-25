@@ -1,6 +1,6 @@
 from sklearn.pipeline import Pipeline
 
-from skops import card, hub_utils
+from skops import hub_utils
 
 from datasets import load_dataset
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -9,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 import os
 from skops.io import dump
-from tempfile import mkdtemp, mkstemp
+from tempfile import mkdtemp
 import sklearn
 from argparse import ArgumentParser
 
@@ -78,7 +78,7 @@ def evaluate_model(model):
     """
     Evaluates the trained model on the test dataset and returns a classification report.
 
-    Args: model (Pipeline): The trained scikit-learn pipeline.
+    Args: model: The trained scikit-learn pipeline.
 
     Returns: str: Classification report as a string.
     """

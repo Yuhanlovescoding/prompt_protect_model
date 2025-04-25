@@ -1,21 +1,24 @@
 import sys
-import pickle
+from skops.io import load
 from pathlib import Path
-from skops.hub_utils import download
+from skops.io import get_untrusted_types
 
 def load_model():
     """
-    Loads the prompt injection detection model. If the model is not
-    already downloaded locally, it is fetched from the HuggingFace Hub.
+    Loads locally trained model.
 
-    Returns: sklearn.Pipeline: A trained scikit-learn pipeline for detection.
+    Returns: our trained detection model.
     """
-    model_path = 'thevgergroup/prompt_protect'
-    if not Path(model_path).is_dir():
-        print("Downloading model...")
-        download(dst=model_path, repo_id=model_path)
-    with open(f"{model_path}/skops-3fs68p31.pkl", "rb") as f:
-        return pickle.load(f)
+    model_path = 'models/thevgergroup/prompt_protect_model.skops'
+    if not Path(model_path).exists():
+        raise FileNotFoundError(
+            f"Model file not found at {model_path}.\n"
+            "Please train your model first by running train.py"
+        )
+
+    untrusted = get_untrusted_types(file=model_path)
+    return load(model_path, trusted=list(untrusted))
+
 
 def detect(prompt, model):
     """
@@ -23,12 +26,11 @@ def detect(prompt, model):
 
     Args:
     prompt (str): The input prompt to check.
-    model (sklearn.Pipeline): The trained detection model.
+    model: The trained detection model.
 
     Returns: bool: True if prompt injection is detected, False otherwise.
     """
-    result = model.predict([prompt])[0]
-    return result == 1
+    return model.predict([prompt])[0] == 1
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
